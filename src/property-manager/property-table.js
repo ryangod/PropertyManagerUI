@@ -60,6 +60,7 @@ export class PropertyTable extends React.Component {
                        onSelectionChange={e => this.handlePropertySelected(e)}>
                 <Column field="address" header="Address"/>
                 <Column field="datePurchasedDisplay" header="Date of Purchase"/>
+                <Column field="cost" header="Cost"/>
                 <Column field="downPayment" header="Down Payment"/>
                 <Column field="interestRate" header="Loan Interest Rate"/>
             </DataTable>
