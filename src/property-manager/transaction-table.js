@@ -56,7 +56,7 @@ export class TransactionTable extends React.Component {
 
     render() {
         return [
-            <TransactionForm lease={this.props.lease}/>,
+            <TransactionForm lease={this.props.lease} onCreate={() => this.loadTransactions()}/>,
             <DataTable value={this.state.transactions}
                        selectionMode="single"
                        loading={this.loading}

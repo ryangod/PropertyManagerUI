@@ -60,7 +60,7 @@ export class LeaseTable extends React.Component {
 
     render() {
         return [
-            <LeaseForm tenant={this.props.tenant}/>,
+            <LeaseForm tenant={this.props.tenant} onCreate={() => {this.loadLeases()}}/>,
             <DataTable value={this.state.leases}
                        selectionMode="single"
                        loading={this.loading}

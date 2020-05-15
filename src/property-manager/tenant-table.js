@@ -48,7 +48,7 @@ export class TenantTable extends React.Component {
 
     render() {
         return [
-            <TenantForm unit={this.props.unit}/>,
+            <TenantForm unit={this.props.unit} onCreate={() => this.loadTenants()}/>,
             <DataTable value={this.state.tenants}
                        selectionMode="single"
                        loading={this.loading}

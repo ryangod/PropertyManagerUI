@@ -2,31 +2,45 @@ import React from "react";
 import {Dialog} from 'primereact/dialog';
 import {Button} from "primereact/button";
 import {InputText} from 'primereact/inputtext';
-import {apiRootUrl} from "../global";
+import {apiRootUrl, submitButtonDisabled} from "../global";
 import {InputNumber} from 'primereact/inputnumber';
 import {InputSwitch} from 'primereact/inputswitch';
 import {Calendar} from "primereact/calendar";
 
-
 export class LeaseForm extends React.Component {
+    sendingRequest = false;
+
+    defaultFormValues = {
+        monthlyCost: null,
+        startDate: null,
+        endDate: null
+    };
 
     constructor(props) {
         super(props);
 
         this.state = {
             displayForm: false,
-            monthlyCostValue: null,
-            startDateValue: null,
-            endDateValue: null
+            formValues: {...this.defaultFormValues}
         };
+    }
+
+    resetForm() {
+        this.setState({displayForm: false});
+        this.setState({formValues: {...this.defaultFormValues}});
+    }
+
+    setFormValue(key, value) {
+        let newFormValues = new Object(this.state.formValues);
+        newFormValues[key] = value;
+
+        this.setState({formValues: newFormValues});
     }
 
     submitForm() {
         const lease = {
             unitTenantId: this.props.tenant.unitTenantId,
-            monthlyCost: this.state.monthlyCostValue,
-            startDate: this.state.startDateValue,
-            endDate: this.state.endDateValue
+            ...this.state.formValues
         };
 
         // POST request using fetch with error handling
@@ -36,9 +50,13 @@ export class LeaseForm extends React.Component {
             body: JSON.stringify(lease)
         };
 
+        this.sendingRequest = true;
+
         fetch(`${apiRootUrl}lease`, requestOptions)
             .then(async response => {
                 const data = await response.json();
+
+                this.sendingRequest = false;
 
                 // check for error response
                 if (!response.ok) {
@@ -47,9 +65,11 @@ export class LeaseForm extends React.Component {
                     return Promise.reject(error);
                 }
 
-                console.log('successful');
+                this.resetForm();
+                this.props.onCreate();
             })
             .catch(error => {
+                this.sendingRequest = false;
                 this.setState({ errorMessage: error.toString() });
                 console.error('There was an error!', error);
             });
@@ -61,18 +81,20 @@ export class LeaseForm extends React.Component {
                 <div className="p-grid p-dir-col">
                     <div className="p-col-12">
                         <span className="p-float-label">
-                            <InputNumber id="monthlyCost" style={{width: '100%'}} value={this.state.monthlyCostValue}
-                                         onChange={(e) => this.setState({monthlyCostValue: e.value})} mode="currency" currency="USD" locale="en-US" />
+                            <InputNumber id="monthlyCost" style={{width: '100%'}} value={this.state.formValues.monthlyCost}
+                                         onChange={(e) => this.setFormValue('monthlyCost', e.value)} mode="currency" currency="USD" locale="en-US" />
                             <label htmlFor="monthlyCost">Monthly Rent</label>
                         </span>
                     </div>
                     <div className="p-col-12">
                         <label>Start Date</label>
-                        <Calendar value={this.state.startDateValue} style={{width: '100%'}} appendTo={document.body} onChange={(e) => this.setState({startDateValue: e.value.toISOString()})} />
+                        <Calendar value={this.state.formValues.startDate} style={{width: '100%'}} appendTo={document.body}
+                                  onChange={(e) => this.setFormValue('startDate', e.value.toISOString())}/>
                     </div>
                     <div className="p-col-12">
                         <label>End Date</label>
-                        <Calendar value={this.state.endDateValue} style={{width: '100%'}} appendTo={document.body} onChange={(e) => this.setState({endDateValue: e.value.toISOString()})} />
+                        <Calendar value={this.state.formValues.endDate} style={{width: '100%'}} appendTo={document.body}
+                                  onChange={(e) => this.setFormValue('endDate', e.value.toISOString())}/>
                     </div>
                 </div>
             </form>
@@ -82,7 +104,7 @@ export class LeaseForm extends React.Component {
     renderFooter() {
         return (
             <div>
-                <Button label="Submit" icon="pi pi-check" onClick={() => this.submitForm()}/>
+                <Button label="Submit" icon="pi pi-check" onClick={() => this.submitForm()} disabled={submitButtonDisabled(this.sendingRequest, this.state.formValues)}/>
                 <Button label="Cancel" icon="pi pi-times" onClick={() => this.setState({displayForm: false})} className="p-button-secondary"/>
             </div>
         );
@@ -100,7 +122,7 @@ export class LeaseForm extends React.Component {
                         />
                     </div>
                 </div>
-                <Dialog header="Add Tenant"
+                <Dialog header="Add Lease"
                         visible={this.state.displayForm}
                         style={{width: '400px'}}
                         onHide={() => this.setState({displayForm: false})}

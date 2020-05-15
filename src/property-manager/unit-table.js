@@ -43,7 +43,6 @@ export class UnitTable extends React.Component {
     }
 
     booleanTemplate(rowData, column) {
-        console.log(JSON.stringify(rowData));
         return <span>{`${rowData.isOccupied? 'Yes': 'No'}`}</span>;
     }
 
@@ -54,7 +53,7 @@ export class UnitTable extends React.Component {
 
     render() {
         return [
-            <UnitForm property={this.props.property}/>,
+            <UnitForm property={this.props.property} onCreate={() => this.loadUnits()}/>,
             <DataTable value={this.state.units}
                        selectionMode="single"
                        loading={this.loading}

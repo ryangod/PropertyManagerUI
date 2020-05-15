@@ -2,30 +2,44 @@ import React from "react";
 import {Dialog} from 'primereact/dialog';
 import {Button} from "primereact/button";
 import {InputText} from 'primereact/inputtext';
-import {apiRootUrl} from "../global";
+import {apiRootUrl, submitButtonDisabled} from "../global";
 import {InputNumber} from 'primereact/inputnumber';
 import {InputSwitch} from 'primereact/inputswitch';
 
-
 export class TenantForm extends React.Component {
+    sendingRequest = false;
+
+    defaultFormValues = {
+        name: null,
+        occupation: null,
+        creditScore: null
+    };
 
     constructor(props) {
         super(props);
 
         this.state = {
             displayForm: false,
-            nameValue: null,
-            occupationValue: null,
-            creditScoreValue: null
+            formValues: {...this.defaultFormValues}
         };
+    }
+
+    resetForm() {
+        this.setState({displayForm: false});
+        this.setState({formValues: {...this.defaultFormValues}});
+    }
+
+    setFormValue(key, value) {
+        let newFormValues = new Object(this.state.formValues);
+        newFormValues[key] = value;
+
+        this.setState({formValues: newFormValues});
     }
 
     submitForm() {
         const unit = {
             unitId: this.props.unit.propertyUnitId,
-            name: this.state.nameValue,
-            occupation: this.state.occupationValue,
-            creditScore: this.state.creditScoreValue
+            ...this.state.formValues
         };
 
         // POST request using fetch with error handling
@@ -35,9 +49,13 @@ export class TenantForm extends React.Component {
             body: JSON.stringify(unit)
         };
 
+        this.sendingRequest = true;
+
         fetch(`${apiRootUrl}tenant`, requestOptions)
             .then(async response => {
                 const data = await response.json();
+
+                this.sendingRequest = false;
 
                 // check for error response
                 if (!response.ok) {
@@ -46,9 +64,11 @@ export class TenantForm extends React.Component {
                     return Promise.reject(error);
                 }
 
-                console.log('successful');
+                this.resetForm();
+                this.props.onCreate();
             })
             .catch(error => {
+                this.sendingRequest = false;
                 this.setState({ errorMessage: error.toString() });
                 console.error('There was an error!', error);
             });
@@ -60,19 +80,22 @@ export class TenantForm extends React.Component {
                 <div className="p-grid p-dir-col">
                     <div className="p-col-12">
                         <span className="p-float-label">
-                            <InputText id="name" style={{width: '100%'}} value={this.state.nameValue} onChange={(e) => this.setState({nameValue: e.target.value})} />
+                            <InputText id="name" style={{width: '100%'}} value={this.state.formValues.name}
+                                       onChange={(e) => this.setFormValue('name', e.target.value)} />
                             <label htmlFor="name">Tenant Name</label>
                         </span>
                     </div>
                     <div className="p-col-12">
                         <span className="p-float-label">
-                            <InputText id="occupation" style={{width: '100%'}} value={this.state.occupationValue} onChange={(e) => this.setState({occupationValue: e.target.value})} />
+                            <InputText id="occupation" style={{width: '100%'}} value={this.state.formValues.occupation}
+                                       onChange={(e) => this.setFormValue('occupation', e.target.value)}/>
                             <label htmlFor="occupation">Tenant Occupation</label>
                         </span>
                     </div>
                     <div className="p-col-12">
                         <span className="p-float-label">
-                            <InputNumber id="creditScore" style={{width: '100%'}} value={this.state.creditScoreValue} onChange={(e) => this.setState({creditScoreValue: e.value})}/>
+                            <InputNumber id="creditScore" style={{width: '100%'}} value={this.state.formValues.creditScore}
+                                         onChange={(e) => this.setFormValue('creditScore', e.value)}/>
                             <label htmlFor="creditScore">Credit Score</label>
                         </span>
                     </div>
@@ -84,7 +107,7 @@ export class TenantForm extends React.Component {
     renderFooter() {
         return (
             <div>
-                <Button label="Submit" icon="pi pi-check" onClick={() => this.submitForm()}/>
+                <Button label="Submit" icon="pi pi-check" onClick={() => this.submitForm()} disabled={submitButtonDisabled(this.sendingRequest, this.state.formValues)}/>
                 <Button label="Cancel" icon="pi pi-times" onClick={() => this.setState({displayForm: false})} className="p-button-secondary"/>
             </div>
         );

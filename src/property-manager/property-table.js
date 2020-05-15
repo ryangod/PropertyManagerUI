@@ -50,7 +50,7 @@ export class PropertyTable extends React.Component {
 
     render() {
         return [
-            <PropertyForm/>,
+            <PropertyForm onCreate={() => this.loadProperties()}/>,
             <DataTable value={this.state.properties}
                        selectionMode="single"
                        header="Properties"

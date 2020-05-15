@@ -2,32 +2,45 @@ import React from "react";
 import {Dialog} from 'primereact/dialog';
 import {Button} from "primereact/button";
 import {InputText} from 'primereact/inputtext';
-import {apiRootUrl} from "../global";
+import {apiRootUrl, submitButtonDisabled} from "../global";
 import {InputNumber} from 'primereact/inputnumber';
 import {InputSwitch} from 'primereact/inputswitch';
 
-
 export class UnitForm extends React.Component {
+    sendingRequest = false;
+
+    defaultFormValues = {
+        unitName: null,
+        beds: null,
+        isOccupied: false,
+        value: null
+    };
 
     constructor(props) {
         super(props);
 
         this.state = {
             displayForm: false,
-            unitNameValue: null,
-            bedsValue: null,
-            isOccupiedValue: false,
-            valueValue: null
+            formValues: {...this.defaultFormValues}
         };
+    }
+
+    resetForm() {
+        this.setState({displayForm: false});
+        this.setState({formValues: {...this.defaultFormValues}});
+    }
+
+    setFormValue(key, value) {
+        let newFormValues = new Object(this.state.formValues);
+        newFormValues[key] = value;
+
+        this.setState({formValues: newFormValues});
     }
 
     submitForm() {
         const unit = {
             propertyId: this.props.property.propertyId,
-            unitName: this.state.unitNameValue,
-            beds: this.state.bedsValue,
-            isOccupied: this.state.isOccupiedValue,
-            value: this.state.valueValue
+            ...this.state.formValues
         };
 
         // POST request using fetch with error handling
@@ -37,9 +50,13 @@ export class UnitForm extends React.Component {
             body: JSON.stringify(unit)
         };
 
+        this.sendingRequest = true;
+
         fetch(`${apiRootUrl}unit`, requestOptions)
             .then(async response => {
                 const data = await response.json();
+
+                this.sendingRequest = false;
 
                 // check for error response
                 if (!response.ok) {
@@ -48,9 +65,11 @@ export class UnitForm extends React.Component {
                     return Promise.reject(error);
                 }
 
-                console.log('successful');
+                this.resetForm();
+                this.props.onCreate();
             })
             .catch(error => {
+                this.sendingRequest = false;
                 this.setState({ errorMessage: error.toString() });
                 console.error('There was an error!', error);
             });
@@ -62,24 +81,29 @@ export class UnitForm extends React.Component {
                 <div className="p-grid p-dir-col">
                     <div className="p-col-12">
                         <span className="p-float-label">
-                            <InputText id="unitName" style={{width: '100%'}} value={this.state.unitNameValue} onChange={(e) => this.setState({unitNameValue: e.target.value})} />
+                            <InputText id="unitName" style={{width: '100%'}} value={this.state.formValues.unitName}
+                                       onChange={(e) => this.setFormValue('unitName', e.target.value)}/>
                             <label htmlFor="unitName">Unit Name</label>
                         </span>
                     </div>
                     <div className="p-col-12">
                         <label htmlFor="beds">Number of Bedrooms</label>
-                        <InputNumber id="beds" value={this.state.bedsValue} onChange={(e) => this.setState({bedsValue: e.value})} showButtons buttonLayout="horizontal" spinnerMode="horizontal"
-                                     decrementButtonClassName="p-button-danger" incrementButtonClassName="p-button-success" incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus"/>
+                        <InputNumber id="beds" value={this.state.formValues.beds} onChange={(e) => this.setFormValue('beds', e.target.value)}
+                                     showButtons buttonLayout="horizontal" spinnerMode="horizontal"
+                                     decrementButtonClassName="p-button-danger" incrementButtonClassName="p-button-success"
+                                     incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus"/>
                     </div>
                     <div className="p-col-12">
                         <span className="p-float-label">
                             <label>Currently Occupied</label>
-                            <InputSwitch id="isOccupied"  checked={this.state.isOccupiedValue} onChange={(e) => this.setState({isOccupiedValue: e.value})} />
+                            <InputSwitch id="isOccupied"  checked={this.state.isOccupied}
+                                         onChange={(e) => this.setFormValue('isOccupied', e.value)}/>
                         </span>
                     </div>
                     <div className="p-col-12">
                         <span className="p-float-label">
-                            <InputNumber id="value" style={{width: '100%'}} value={this.state.valueValue} onChange={(e) => this.setState({valueValue: e.value})} mode="currency" currency="USD" locale="en-US" />
+                            <InputNumber id="value" style={{width: '100%'}} value={this.state.formValues.value}
+                                         onChange={(e) => this.setFormValue('value', e.target.value)} mode="currency" currency="USD" locale="en-US" />
                             <label htmlFor="value">Monthly Cost</label>
                         </span>
                     </div>
@@ -91,7 +115,7 @@ export class UnitForm extends React.Component {
     renderFooter() {
         return (
             <div>
-                <Button label="Submit" icon="pi pi-check" onClick={() => this.submitForm()}/>
+                <Button label="Submit" icon="pi pi-check" onClick={() => this.submitForm()} disabled={submitButtonDisabled(this.sendingRequest, this.state.formValues)}/>
                 <Button label="Cancel" icon="pi pi-times" onClick={() => this.setState({displayForm: false})} className="p-button-secondary"/>
             </div>
         );

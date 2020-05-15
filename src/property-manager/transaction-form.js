@@ -1,13 +1,13 @@
 import React from "react";
 import {Dialog} from 'primereact/dialog';
 import {Button} from "primereact/button";
-import {apiRootUrl} from "../global";
+import {apiRootUrl, submitButtonDisabled} from "../global";
 import {InputNumber} from 'primereact/inputnumber';
 import {Dropdown} from 'primereact/dropdown';
 
-
-
 export class TransactionForm extends React.Component {
+    sendingRequest = false;
+
     paymentMethods = [
         {label: 'Visa', value: 'Visa'},
         {label: 'Mastercard', value: 'Mastercard'},
@@ -16,21 +16,36 @@ export class TransactionForm extends React.Component {
         {label: 'PayPal', value: 'PayPal'}
     ];
 
+    defaultFormValues = {
+        amountPaid: null,
+        paymentMethod: null
+    };
+
     constructor(props) {
         super(props);
 
         this.state = {
             displayForm: false,
-            amountPaidValue: null,
-            paymentMethodValue: null
+            formValues: {...this.defaultFormValues}
         };
+    }
+
+    resetForm() {
+        this.setState({displayForm: false});
+        this.setState({formValues: {...this.defaultFormValues}});
+    }
+
+    setFormValue(key, value) {
+        let newFormValues = new Object(this.state.formValues);
+        newFormValues[key] = value;
+
+        this.setState({formValues: newFormValues});
     }
 
     submitForm() {
         const transaction = {
             tenantLeaseId: this.props.lease.tenantLeaseId,
-            amountPaid: this.state.amountPaidValue,
-            paymentMethod: this.state.paymentMethodValue
+            ...this.state.formValues
         };
 
         // POST request using fetch with error handling
@@ -40,9 +55,13 @@ export class TransactionForm extends React.Component {
             body: JSON.stringify(transaction)
         };
 
+        this.sendingRequest = true;
+
         fetch(`${apiRootUrl}transaction`, requestOptions)
             .then(async response => {
                 const data = await response.json();
+
+                this.sendingRequest = false;
 
                 // check for error response
                 if (!response.ok) {
@@ -51,9 +70,11 @@ export class TransactionForm extends React.Component {
                     return Promise.reject(error);
                 }
 
-                console.log('successful');
+                this.resetForm();
+                this.props.onCreate();
             })
             .catch(error => {
+                this.sendingRequest = false;
                 this.setState({ errorMessage: error.toString() });
                 console.error('There was an error!', error);
             });
@@ -65,16 +86,16 @@ export class TransactionForm extends React.Component {
                 <div className="p-grid p-dir-col">
                     <div className="p-col-12">
                         <span className="p-float-label">
-                            <InputNumber id="amountPaid" style={{width: '100%'}} value={this.state.amountPaidValue}
-                                         onChange={(e) => this.setState({amountPaidValue: e.value})} mode="currency" currency="USD" locale="en-US" />
+                            <InputNumber id="amountPaid" style={{width: '100%'}} value={this.state.formValues.amountPaid}
+                                         onChange={(e) => this.setFormValue('amountPaid', e.value)} mode="currency" currency="USD" locale="en-US" />
                             <label htmlFor="amountPaid">Amount Paid</label>
                         </span>
                     </div>
                     <div className="p-col-12">
                         <label>Payment Method</label>
-                        <Dropdown value={this.state.paymentMethodValue} options={this.paymentMethods}
-                                  onChange={(e) => {this.setState({paymentMethodValue: e.value})}}
-                                  placeholder="Select a Payment Method"/>
+                        <Dropdown value={this.state.formValues.paymentMethod} options={this.paymentMethods}
+                                  onChange={(e) => this.setFormValue('paymentMethod', e.value)}
+                                  placeholder="Select a Payment Method" appendTo={document.body}/>
                     </div>
                 </div>
             </form>
@@ -84,7 +105,7 @@ export class TransactionForm extends React.Component {
     renderFooter() {
         return (
             <div>
-                <Button label="Submit" icon="pi pi-check" onClick={() => this.submitForm()}/>
+                <Button label="Submit" icon="pi pi-check" onClick={() => this.submitForm()} disabled={submitButtonDisabled(this.sendingRequest, this.state.formValues)}/>
                 <Button label="Cancel" icon="pi pi-times" onClick={() => this.setState({displayForm: false})} className="p-button-secondary"/>
             </div>
         );
@@ -102,7 +123,7 @@ export class TransactionForm extends React.Component {
                         />
                     </div>
                 </div>
-                <Dialog header="Add Tenant"
+                <Dialog header="Add Transaction"
                         visible={this.state.displayForm}
                         style={{width: '400px'}}
                         onHide={() => this.setState({displayForm: false})}
